@@ -27,13 +27,16 @@
     </div>
 
     <!-- Модальные окна для ошибок и успеха -->
-    <div v-if="flashError" class="modal error-modal">
-      <p>{{ flashError }}</p>
-      <button @click="flashError = null">Закрыть</button>
+    <div v-if="flashError" class="modal-overlay" @click="flashError = null">
+      <div class="modal-content error-modal" @click.stop>
+        <p>{{ flashError }}</p>
+        <button @click="flashError = null">Закрыть</button>
+      </div>
     </div>
 
-    <div v-if="showSuccessModal" class="modal">
-      <div class="modal-content">
+
+    <div v-if="showSuccessModal" class="success-modal-overlay">
+      <div class="modal-content success-modal">
         <h2>Успех!</h2>
         <p>{{ successMessage }}</p>
         <small>Перенаправляю на главную...</small>
@@ -45,7 +48,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import { useForm } from '@inertiajs/vue3'
+import { useForm, usePage } from '@inertiajs/vue3'
 import { Inertia } from '@inertiajs/inertia'
 import { route } from 'ziggy-js'
 import { Ziggy } from './../ziggy'
@@ -59,7 +62,9 @@ const selectedDate = ref(null)
 const selectedSlot = ref(null)
 const showSuccessModal = ref(false)
 const successMessage = ref('')
+const flashError = ref(null)
 
+const page = usePage()
 const form = useForm({
   date: '',
   time: '',
@@ -87,22 +92,17 @@ function bookSlot() {
 
   form.post(url, {
     onSuccess: (page) => {
-      selectedSlot.value = null
-      selectedDate.value = null
-      form.reset('client_name', 'client_phone')
-
-      // Показываем модальное окно с успехом
-      successMessage.value = page.props.flash.success || 'Бронирование успешно создано!'
-      showSuccessModal.value = true
-
-      // Авто-редирект через 2 секунды
-      setTimeout(() => {
-        showSuccessModal.value = false
-        Inertia.visit(route('services.index'))
-      }, 2000)
+      if (page.props.flash?.success) {
+        successMessage.value = page.props.flash.success
+        showSuccessModal.value = true
+        setTimeout(() => {
+          showSuccessModal.value = false
+          Inertia.visit(route('services.index'))
+        }, 2000)
+      }
     },
     onError: (errors) => {
-      console.log('Ошибка бронирования:', errors)
+      flashError.value = page.props.errors.error || 'Ошибка при бронировании'
     },
   })
 }
@@ -159,44 +159,53 @@ function bookSlot() {
   cursor: not-allowed;
 }
 
-.error {
-  color: #ef4444;
-  margin-top: 8px;
-}
 
-.success {
-  color: #10b981;
-  margin-top: 8px;
-}
-
-.modal {
+.modal-overlay {
   position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(0,0,0,0.7); /* затемнённый фон */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999; /* поверх всего */
-}
-
-.modal-content {
-  background: white;
-  padding: 25px 35px;
-  border-radius: 10px;
-  text-align: center;
-  box-shadow: 0 5px 20px rgba(0,0,0,0.3);
-  max-width: 400px;
-  width: 90%;
+  z-index: 9999;
 }
 
 .error-modal {
   background: #ef4444;
   color: white;
+  padding: 20px 30px;
+  border-radius: 10px;
+  max-width: 300px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+}
+
+.success-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  /* затемнённый фон */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
 }
 
 .success-modal {
   background: #10b981;
   color: white;
+  padding: 25px 35px;
+  border-radius: 10px;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
 }
 </style>

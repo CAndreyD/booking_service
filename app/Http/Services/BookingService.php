@@ -7,8 +7,31 @@ use App\Models\Service;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * Сервис для управления бронированиями.
+ * Содержит бизнес-логику проверки и создания новых записей о бронировании.
+ */
 class BookingService
 {
+    /**
+     * Создаёт новое бронирование для указанной услуги.
+     *
+     * Проверяет:
+     *  - Запрет на воскресенье;
+     *  - Соблюдение рабочих часов (10:00–20:00);
+     *  - Отсутствие пересечений с другими активными бронированиями;
+     *  - Блокировку конкурирующих транзакций (через lockForUpdate).
+     *
+     * @param Service $service Услуга, для которой создаётся бронирование.
+     * @param array $data Данные бронирования:
+     *  - date (Y-m-d): дата начала;
+     *  - time (H:i): время начала;
+     *  - client_name (string): имя клиента;
+     *  - client_phone (string): телефон клиента.
+     *
+     * @throws \Exception Если бронирование невозможно (время занято, вне графика, воскресенье).
+     * @return void
+     */
     public function createBooking(Service $service, array $data): void
     {
         $tz = 'Europe/Moscow';

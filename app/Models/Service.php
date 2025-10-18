@@ -4,7 +4,8 @@ namespace App\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
-
+use App\Models\ServiceSchedule;
+use App\Models\Booking;
 class Service extends Model
 {
     protected $fillable = ['name', 'duration_minutes'];

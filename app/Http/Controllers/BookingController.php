@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Service;
 use App\Http\Services\BookingService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Redirect;
-use Inertia\Inertia;
+use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Validation\ValidationException;
 
 class BookingController extends Controller
 {
@@ -25,8 +25,9 @@ class BookingController extends Controller
             return back()
                 ->with('success', 'Бронирование успешно создано!');
         } catch (\Throwable $e) {
-            return back()
-                ->with('error', $e->getMessage());
+            throw ValidationException::withMessages([
+                'error' => $e->getMessage()
+            ]);
         }
     }
 }
