@@ -2,76 +2,60 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Booking;
-use App\Models\ServiceSchedule;
-use Inertia\Inertia;
 use App\Models\Service;
+use App\Models\Booking;
+use Inertia\Inertia;
 use Carbon\Carbon;
-use DateInterval;
-use DatePeriod;
-use DateTime;
-use Illuminate\Http\Request;
 
 class ServiceController extends Controller
 {
     public function index()
     {
         $services = Service::all();
-        return Inertia::render('ServicesIndex', [
-            'services' => $services,
-        ]);
+        return Inertia::render('ServicesIndex', compact('services'));
     }
 
     public function show(Service $service)
     {
         return Inertia::render('ServiceShow', [
             'service' => $service,
+            'slots' => $this->generateWeekSlots($service),
+            'bookingUrl' => route('bookings.store', $service->id)
         ]);
     }
 
-    public function weekSlots(Service $service)
+    private function generateWeekSlots(Service $service): array
     {
         $tz = 'Europe/Moscow';
-
-        // Получаем брони за неделю
         $bookings = Booking::where('service_id', $service->id)
             ->where('status', 'active')
             ->get();
 
-        // Рабочие часы (например, 10:00–20:00)
-        $workStart = 10; // 10:00
-        $workEnd   = 20; // 20:00
-        $slotMinutes = 30; // длительность слота
-
-        // Формируем дни недели (Пн-Сб)
-        $weekDays = collect();
-        $startDate = now()->startOfWeek(); // Пн текущей недели
+        $week = [];
+        $startDate = now()->startOfWeek();
         for ($i = 0; $i < 6; $i++) {
             $day = $startDate->copy()->addDays($i);
             $slots = [];
-            for ($h = $workStart; $h < $workEnd; $h++) {
-                foreach ([0, $slotMinutes] as $m) {
-                    $slotStart = $day->copy()->setTime($h, $m, 0);
-                    $slotEnd   = $slotStart->copy()->addMinutes($slotMinutes);
+            for ($h = 10; $h < 20; $h++) {
+                foreach ([0, 30] as $m) {
+                    $slotStart = $day->copy()->setTime($h, $m);
+                    $slotEnd = $slotStart->copy()->addMinutes(30);
 
-                    // Проверка на занятость
-                    $isBusy = $bookings->contains(function ($b) use ($slotStart, $slotEnd, $tz) {
-                        $bookingStart = Carbon::parse($b->start_at)->timezone($tz);
-                        $bookingEnd   = Carbon::parse($b->end_at)->timezone($tz);
-                        return $slotStart < $bookingEnd && $slotEnd > $bookingStart;
-                    });
+                    $isBusy = $bookings->contains(
+                        fn($b) =>
+                        $slotStart < Carbon::parse($b->end_at, $tz) &&
+                            $slotEnd > Carbon::parse($b->start_at, $tz)
+                    );
 
                     $slots[] = [
                         'time' => $slotStart->format('H:i'),
-                        'start_at' => $slotStart->format('Y-m-d H:i'),
-                        'end_at'   => $slotEnd->format('Y-m-d H:i'),
                         'busy' => $isBusy,
                     ];
                 }
             }
-            $weekDays[$day->format('Y-m-d')] = $slots;
+            $week[$day->format('Y-m-d')] = $slots;
         }
 
-        return response()->json(['slots' => $weekDays]);
+        return $week;
     }
 }
