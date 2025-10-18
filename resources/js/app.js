@@ -1,18 +1,26 @@
-import { createApp, h } from 'vue';
-import { createInertiaApp } from '@inertiajs/inertia-vue3';
-import { InertiaProgress } from '@inertiajs/progress';
-import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
+import { createApp, h } from 'vue'
+// import { createInertiaApp } from '@inertiajs/inertia-vue3'
+import { createInertiaApp } from '@inertiajs/vue3'
+
+import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers'
+import { InertiaProgress } from '@inertiajs/progress'
+// import { route } from 'ziggy-js'
+import { ZiggyVue } from 'ziggy-js'
+import { Ziggy } from './ziggy'
+
+InertiaProgress.init()
 
 createInertiaApp({
-  resolve: name => resolvePageComponent(
-    `./Pages/${name}.vue`,
-    import.meta.glob('./Pages/**/*.vue')
-  ),
+  title: (title) => `${title ? title + ' - ' : ''}MyApp`,
+  resolve: (name) => resolvePageComponent(`./Pages/${name}.vue`, import.meta.glob('./Pages/**/*.vue')),
   setup({ el, App, props, plugin }) {
-    createApp({ render: () => h(App, props) })
+    const app = createApp({ render: () => h(App, props) })
       .use(plugin)
-      .mount(el);
+      .use(ZiggyVue) // если используешь ziggy
+      .mount(el)
   },
-});
-
-InertiaProgress.init();
+  progress: {
+    color: '#4B5563',
+  },
+  historyEncryption: true, // ✅ включаешь шифрование истории
+})
